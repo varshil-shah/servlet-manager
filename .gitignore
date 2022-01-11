@@ -1,0 +1,7 @@
+build
+dist
+.stock_venv
+.idea
+__pycache__
+main.spec
+temp.py

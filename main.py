@@ -35,7 +35,7 @@ def create_new_project(webapps_folder: str, project_name: str):
         file_writer.write(html_data)
 
     os.mkdir(f"{project_path}/images")
-    print(colored(f"Project created at ${project_path}", "green"))
+    print(colored(f"Project created at {project_path}", "green"))
 
 
 def open_project(webapps_folder: str, project_name: str) -> bool:

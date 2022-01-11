@@ -1,4 +1,6 @@
 import os
+import sys
+from subprocess import Popen, CREATE_NEW_CONSOLE, SubprocessError
 from termcolor import colored
 
 
@@ -42,6 +44,40 @@ def create_new_file(webapps_folder: str, project_name: str):
         print(colored(str(e), "red"))
     else:
         print(colored(f"{filename} created successfully!", "green"))
+
+
+def compile_file(tomcat_folder: str, project_name: str):
+    filename = input("Enter file to compile: ")
+    project_folder = fr"{tomcat_folder}\webapps\{project_name}"
+    command = fr'javac --class-path ".;{tomcat_folder}\lib\servlet-api.jar" "{project_folder}\src\{filename}"'
+    if os.path.exists(os.path.join(project_folder, "src", filename)):
+        try:
+            output = Popen(command)
+            output.communicate()
+            code = output.returncode
+        except SubprocessError as e:
+            print(colored(str(e), "red"))
+        else:
+            if code == 0:
+                filename_without_ext, _ = os.path.splitext(filename)
+                class_filename = f"{filename_without_ext}.class"
+                src = os.path.join(project_folder, fr"src\{class_filename}")
+
+                if os.path.exists(src):
+                    hard_link_class_file(project_folder, src, class_filename)
+                else:
+                    print(colored(f"{class_filename} not found", "red"))
+            else:
+                print(colored(f"Error in {filename}", "red"))
+    else:
+        print(colored("File not found!", "red"))
+
+
+def hard_link_class_file(project_folder: str, src: str, class_filename: str):
+    dest = os.path.join(project_folder, fr"WEB-INF\classes\{class_filename}")
+    if not os.path.exists(dest):
+        os.link(src, dest)
+        print(colored("Hard link created to classes folder", "yellow"))
 
 
 if __name__ == "__main__":

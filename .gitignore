@@ -4,4 +4,3 @@ dist
 .idea
 __pycache__
 main.spec
-temp.py

@@ -1,8 +1,9 @@
 import os
 import sys
 from subprocess import Popen, CREATE_NEW_CONSOLE, SubprocessError
-
+from colorama import init
 from termcolor import colored
+from time import sleep
 
 
 def handle_server(tomcat_folder_path: str, command: str):
@@ -180,6 +181,7 @@ def main():
         print(colored(
             "Please set CATALINA_HOME in environment variables pointing to the Apache Tomcat installation directory",
             "yellow"))
+        sleep(10)
         sys.exit(1)
 
     webapps_folder = os.path.join(tomcat_folder_path, "webapps")
@@ -193,4 +195,5 @@ def main():
 
 
 if __name__ == "__main__":
+    init()
     main()

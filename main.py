@@ -14,8 +14,12 @@ def handle_server(tomcat_folder_path: str, command: str):
 def create_new_project(webapps_folder: str, project_name: str):
     os.chdir(webapps_folder)
 
-    if not os.path.exists(project_name):
-        os.makedirs(project_name)
+    if os.path.exists(project_name):
+        print(colored(f"{project_name} already exists", "yellow"))
+        sleep(5)
+        sys.exit(1)
+
+    os.makedirs(project_name)
 
     project_path = os.path.join(webapps_folder, project_name)
     os.mkdir(f"{project_path}/src")
@@ -34,6 +38,9 @@ def create_new_project(webapps_folder: str, project_name: str):
 
     with open('index.html', 'w') as file_writer:
         file_writer.write(html_data)
+
+    with open(f'{project_path}/WEB-INF/web.xml', 'w') as file_writer:
+        pass
 
     os.mkdir(f"{project_path}/images")
     print(colored(f"Project created at {project_path}", "green"))

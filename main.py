@@ -1,14 +1,14 @@
 import os
 import sys
-from subprocess import Popen, CREATE_NEW_CONSOLE, SubprocessError
+from subprocess import SubprocessError
+
 from colorama import init
 from termcolor import colored
 from time import sleep
 
+from server import *
 
-def handle_server(tomcat_folder_path: str, command: str):
-    Popen([os.path.join(tomcat_folder_path, "bin\\catalina.bat"), command],
-          creationflags=CREATE_NEW_CONSOLE)
+
 
 
 def create_new_project(webapps_folder: str, project_name: str):
@@ -157,19 +157,18 @@ PRESS X: TO QUIT
 
 
 def handle_file_operations(tomcat_folder_path: str, webapps_folder: str, project_name: str):
-    handle_server(tomcat_folder_path, "start")
+    start_server(tomcat_folder_path)
     while True:
         choice = get_file_option()
         match choice.upper():
             case 'N':
                 create_new_file(webapps_folder, project_name)
             case 'R':
-                handle_server(tomcat_folder_path, "stop")
-                handle_server(tomcat_folder_path, "start")
+                restart_server(tomcat_folder_path)
             case 'S':
                 compile_file(tomcat_folder_path, project_name)
             case 'M':
-                handle_server(tomcat_folder_path, "stop")
+                stop_server(tomcat_folder_path)
                 return
             case 'X':
                 exit_with_success()
@@ -198,7 +197,7 @@ def main():
             handle_file_operations(
                 tomcat_folder_path, webapps_folder, project_name)
     except KeyboardInterrupt:
-        handle_server(tomcat_folder_path, "stop")
+        stop_server(tomcat_folder_path)
 
 
 if __name__ == "__main__":

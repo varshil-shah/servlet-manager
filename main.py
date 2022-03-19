@@ -13,8 +13,7 @@ def copy_template_file(src: str, dest: str, running_in_bundle: bool):
     if running_in_bundle:
         src = os.path.join(sys._MEIPASS, src)
 
-
-shutil.copyfile(src, dest)
+    shutil.copyfile(src, dest)
 
 
 def hard_link_class_file(project_folder: str, src: str, class_filename: str):

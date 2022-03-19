@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from subprocess import SubprocessError
 
@@ -8,6 +9,14 @@ from termcolor import colored
 from server import *
 
 
+def copy_template_file(src: str, dest: str, running_in_bundle: bool):
+    if running_in_bundle:
+        src = os.path.join(sys._MEIPASS, src)
+
+
+shutil.copyfile(src, dest)
+
+
 def hard_link_class_file(project_folder: str, src: str, class_filename: str):
     dest = os.path.join(project_folder, fr"WEB-INF\classes\{class_filename}")
     if not os.path.exists(dest):
@@ -15,7 +24,9 @@ def hard_link_class_file(project_folder: str, src: str, class_filename: str):
         print(colored("Hard link created to classes folder", "yellow"))
 
 
-def create_new_project(webapps_folder: str, project_name: str) -> bool:
+def create_new_project(tomcat_folder: str, webapps_folder: str, project_name: str) -> bool:
+    current_dir = os.getcwd()
+    print(f'CURRENT DIR: {current_dir}')
     os.chdir(webapps_folder)
 
     if os.path.exists(project_name):
@@ -30,29 +41,23 @@ def create_new_project(webapps_folder: str, project_name: str) -> bool:
 
     os.mkdir("src")
     os.makedirs("WEB-INF/classes")
-
-    html_data = """
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <h2>Welcome to java servlet project</h2>
-    </body>
-    </html>
-    """
-
-    with open('index.html', 'x') as file:
-        file.write(html_data)
-
-    with open('WEB-INF/web.xml', 'x'):
-        pass
-
     os.mkdir("images")
+
+    running_in_bundle = getattr(sys, 'frozen', False)
+    if not running_in_bundle:
+        os.chdir(current_dir)
+
+    copy_template_file("templates/index.html", os.path.join(project_path, "index.html"), running_in_bundle)
+    copy_template_file("templates/Main.java", os.path.join(project_path, "src/Main.java"), running_in_bundle)
+    copy_template_file("templates/web.xml", os.path.join(project_path, "WEB-INF/web.xml"), running_in_bundle)
+
+    compile_file(tomcat_folder, project_name, "Main.java")
 
     print(colored(f"Project created at {project_path}", "green"))
     return True
 
 
-def open_project(webapps_folder: str, project_name: str) -> bool:
+def open_project(tomcat_folder: str, webapps_folder: str, project_name: str) -> bool:
     project_location = os.path.join(webapps_folder, project_name)
     if os.path.exists(project_location):
         os.chdir(project_location)
@@ -62,7 +67,7 @@ def open_project(webapps_folder: str, project_name: str) -> bool:
 
     should_create = input("Do you want to create it (Y/N) ? ")
     if should_create.lower() == "y":
-        return create_new_project(webapps_folder, project_name)
+        return create_new_project(tomcat_folder, webapps_folder, project_name)
 
     return False
 
@@ -81,10 +86,10 @@ def create_new_file(webapps_folder: str, project_name: str):
         print(colored(f"{filename} created successfully!", "green"))
 
 
-def compile_file(tomcat_folder: str, project_name: str):
-    filename = input("Enter file to compile: ")
+def compile_file(tomcat_folder: str, project_name: str, filename: str):
     project_folder = fr"{tomcat_folder}\webapps\{project_name}"
     command = fr'javac --class-path ".;{tomcat_folder}\lib\servlet-api.jar" "{project_folder}\src\{filename}"'
+
     if not os.path.exists(os.path.join(project_folder, "src", filename)):
         print(colored("File not found!", "red"))
         return
@@ -104,10 +109,7 @@ def compile_file(tomcat_folder: str, project_name: str):
         classfile_name = f"{filename_without_ext}.class"
         src = os.path.join(project_folder, fr"src\{classfile_name}")
 
-        if os.path.exists(src):
-            hard_link_class_file(project_folder, src, classfile_name)
-        else:
-            print(colored(f"{classfile_name} not found", "red"))
+        hard_link_class_file(project_folder, src, classfile_name)
 
 
 def get_project_option():
@@ -123,17 +125,17 @@ PRESS X: TO QUIT
     return selection
 
 
-def get_project(webapps_folder) -> str:
+def get_project(tomcat_folder: str, webapps_folder: str) -> str:
     while True:
         choice = get_project_option()
         match choice.upper():
             case 'C':
                 project_name = input("Enter the project name: ")
-                if create_new_project(webapps_folder, project_name):
+                if create_new_project(tomcat_folder, webapps_folder, project_name):
                     return project_name
             case 'O':
                 project_name = input("Enter existing project name: ")
-                if open_project(webapps_folder, project_name):
+                if open_project(tomcat_folder, webapps_folder, project_name):
                     return project_name
             case 'X':
                 exit_with_success()
@@ -141,7 +143,7 @@ def get_project(webapps_folder) -> str:
                 print(colored(f"Invalid choice: {choice}", "red"))
 
 
-def get_file_option():
+def get_file_option(project_name: str):
     option_prompt = """
 
 PRESS N: TO CREATE A NEW FILE
@@ -159,14 +161,15 @@ PRESS X: TO QUIT
 def handle_file_operations(tomcat_folder_path: str, webapps_folder: str, project_name: str):
     start_server(tomcat_folder_path)
     while True:
-        choice = get_file_option()
+        choice = get_file_option(project_name)
         match choice.upper():
             case 'N':
                 create_new_file(webapps_folder, project_name)
             case 'R':
                 restart_server(tomcat_folder_path)
             case 'S':
-                compile_file(tomcat_folder_path, project_name)
+                filename = input("Enter file to compile: ")
+                compile_file(tomcat_folder_path, project_name, filename)
             case 'M':
                 stop_server(tomcat_folder_path)
                 return
@@ -177,27 +180,29 @@ def handle_file_operations(tomcat_folder_path: str, webapps_folder: str, project
 
 
 def exit_with_success():
-    print(colored("Thanks for using servlet manager!!", "blue", attrs=["bold"]))
+    print(colored("Thanks for using servlet manager!!",
+                  "blue", attrs=["bold"]))
     sys.exit(0)
 
 
 def main():
-    tomcat_folder_path = os.getenv("CATALINA_HOME")
-    if tomcat_folder_path is None:
+    tomcat_folder = os.getenv("CATALINA_HOME")
+    if tomcat_folder is None:
         print(colored(
             "Please set CATALINA_HOME environment variable pointing to the Apache Tomcat installation directory",
             "yellow"))
         input("Press Enter to exit")
         sys.exit(1)
 
-    webapps_folder = os.path.join(tomcat_folder_path, "webapps")
+    webapps_folder = os.path.join(tomcat_folder, "webapps")
     try:
         while True:
-            project_name = get_project(webapps_folder)
+            project_name = get_project(tomcat_folder, webapps_folder)
+            print(colored(f"Project running on url: http://localhost:8080/{project_name}", "yellow"))
             handle_file_operations(
-                tomcat_folder_path, webapps_folder, project_name)
+                tomcat_folder, webapps_folder, project_name)
     except KeyboardInterrupt:
-        stop_server(tomcat_folder_path)
+        stop_server(tomcat_folder)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,9 @@ def copy_template_file(src: str, dest: str, running_in_bundle: bool):
 
 
 def hard_link_class_file(project_folder: str, src: str, class_filename: str):
-    dest = os.path.join(project_folder, fr"WEB-INF\classes\{class_filename}")
+    os.makedirs(os.path.join(project_folder, "WEB-INF", "classes", os.path.dirname(class_filename)))
+    dest = os.path.join(project_folder, "WEB-INF", "classes", os.path.dirname(class_filename),
+                        os.path.basename(class_filename))
     if not os.path.exists(dest):
         os.link(src, dest)
         print(colored("Hard link created to classes folder", "yellow"))
@@ -73,23 +75,27 @@ def open_project(tomcat_folder: str, webapps_folder: str, project_name: str) -> 
 
 def create_new_file(webapps_folder: str, project_name: str):
     src_folder = os.path.join(webapps_folder, project_name, "src")
+    current_dir = os.getcwd()
 
     filename = input("Enter filepath relative to src folder: ")
     try:
-        open(os.path.join(src_folder, filename), 'x').close()
+        os.chdir(src_folder)
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        open(filename, "x").close()
     except FileExistsError:
         print(colored(f"{filename} already exists", "red"))
     except FileNotFoundError as e:
         print(colored(str(e), "red"))
     else:
         print(colored(f"{filename} created successfully!", "green"))
+    os.chdir(current_dir)
 
 
 def compile_file(tomcat_folder: str, project_name: str, filename: str):
     project_folder = fr"{tomcat_folder}\webapps\{project_name}"
     command = fr'javac --class-path ".;{tomcat_folder}\lib\servlet-api.jar" "{project_folder}\src\{filename}"'
 
-    if not os.path.exists(os.path.join(project_folder, "src", filename)):
+    if not os.path.exists(os.path.join(project_folder, "src", os.path.dirname(filename), os.path.basename(filename))):
         print(colored("File not found!", "red"))
         return
 
@@ -105,9 +111,11 @@ def compile_file(tomcat_folder: str, project_name: str, filename: str):
             return
 
         filename_without_ext, _ = os.path.splitext(filename)
+        print(f"File name without extension: {filename_without_ext}")
         classfile_name = f"{filename_without_ext}.class"
-        src = os.path.join(project_folder, fr"src\{classfile_name}")
-
+        src = os.path.join(project_folder, "src", classfile_name)
+        print(f"SRC: {src}")
+        print(f"CURRENT DIR: {os.getcwd()}")
         hard_link_class_file(project_folder, src, classfile_name)
 
 
